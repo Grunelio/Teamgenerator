@@ -8,6 +8,7 @@ body { font-family: Arial, sans-serif; padding: 20px; }
 table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
 th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 input[type=range] { width: 90px; }
+input[type=number] { width: 60px; }
 button { padding: 6px 10px; margin: 5px; }
 .team { margin-bottom: 12px; }
 </style>
@@ -15,6 +16,14 @@ button { padding: 6px 10px; margin: 5px; }
 <body>
 
 <h1>⚽ Teamgenerator (Offline)</h1>
+
+<h2>⚙️ Einstellungen</h2>
+<label>
+Anzahl Mannschaften:
+<input type="number" min="2" max="10" id="teamCount">
+</label>
+
+<hr>
 
 <h2>👥 Spielerliste</h2>
 
@@ -28,6 +37,7 @@ button { padding: 6px 10px; margin: 5px; }
 <th>IQ</th>
 <th>Def</th>
 <th>Off</th>
+<th>Chancen</th>
 <th>❌</th>
 </tr>
 </thead>
@@ -42,56 +52,75 @@ button { padding: 6px 10px; margin: 5px; }
 
 <script>
 // ===============================
-// 🔧 KONFIGURATION
+// 💾 STORAGE
 // ===============================
-const ANZAHL_MANNSCHAFTEN = 4;
-const STORAGE_KEY = "teamgenerator_spieler";
+const STORAGE_KEY_SPIELER = "teamgenerator_spieler";
+const STORAGE_KEY_TEAMS   = "teamgenerator_teamcount";
 
 // ===============================
-// 👥 STARTDATEN (Fallback)
+// 👥 STARTDATEN
 // ===============================
 const defaultSpieler = [
-["Alex Gruen",1,3,3,3,3,3],
-["Alex Koerkel",1,3,2,3,4,3],
-["Andi Doerr",1,3,2,2,3,2],
-["Birk",1,4,4,3,4,3],
-["Christian",1,2,5,1,2,1],
-["Daniel",1,3,2,2,3,4],
-["Dominik",1,3,1,2,1,3],
-["Erik",1,5,1,5,1,3],
-["Frank",1,5,5,5,4,4],
-["Jens",1,3,4,3,3,4],
-["Jonas",1,4,5,4,4,4],
-["Josua",1,4,3,5,5,3],
-["Martin",1,1,5,2,3,3],
-["Mehmet",1,4,3,3,2,4],
-["Sebastian",1,2,2,2,3,2],
-["Simon",1,3,3,3,4,3],
-["Soeren",1,3,3,3,4,3],
-["Xeber",1,4,5,4,3,4],
-["Moser",1,4,3,4,3,4],
-["Andi K",1,3,4,3,4,3],
+["Alex Gruen",1,3,3,3,3,3,3],
+["Alex Koerkel",1,3,2,3,4,3,3],
+["Andi Doerr",1,3,2,2,3,2,2],
+["Birk",1,4,4,3,4,3,3],
+["Christian",1,2,5,1,2,1,1],
+["Daniel",1,3,2,2,3,4,3],
+["Dominik",1,3,1,2,1,3,2],
+["Erik",1,5,1,5,1,3,3],
+["Frank",1,5,5,5,4,4,5],
+["Jens",1,3,4,3,3,4,3],
+["Jonas",1,4,5,4,4,4,4],
+["Josua",1,4,3,5,5,3,4],
+["Martin",1,1,5,2,3,3,2],
+["Mehmet",1,4,3,3,2,4,3],
+["Sebastian",1,2,2,2,3,2,2],
+["Simon",1,3,3,3,4,3,3],
+["Soeren",1,3,3,3,4,3,3],
+["Xeber",1,4,5,4,3,4,4],
+["Moser",1,4,3,4,3,4,3],
+["Andi K",1,3,4,3,4,3,3],
 ];
 
-// ===============================
-// 💾 LOAD / SAVE
-// ===============================
-let spieler = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultSpieler;
+let spieler = JSON.parse(localStorage.getItem(STORAGE_KEY_SPIELER)) || defaultSpieler;
+let anzahlMannschaften = Number(localStorage.getItem(STORAGE_KEY_TEAMS)) || 4;
 
+// ===============================
+// 💾 SAVE
+// ===============================
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(spieler));
+  localStorage.setItem(STORAGE_KEY_SPIELER, JSON.stringify(spieler));
+  localStorage.setItem(STORAGE_KEY_TEAMS, anzahlMannschaften);
 }
 
 // ===============================
 // 🧱 UI
 // ===============================
+const teamInput = document.getElementById("teamCount");
+teamInput.value = anzahlMannschaften;
+teamInput.onchange = () => {
+  anzahlMannschaften = Number(teamInput.value);
+  save();
+};
+
+function slider(i, idx) {
+  return `
+<td>
+<input type="range" min="1" max="5" value="${spieler[i][idx]}"
+oninput="spieler[${i}][${idx}]=Number(this.value);
+document.getElementById('v${i}_${idx}').innerText=this.value;
+save()">
+<br><span id="v${i}_${idx}">${spieler[i][idx]}</span>
+</td>`;
+}
+
 function renderTable() {
   const tbody = document.getElementById("spielerTable");
   tbody.innerHTML = "";
 
   spieler.forEach((s, i) => {
     const tr = document.createElement("tr");
-
     tr.innerHTML = `
 <td><input value="${s[0]}" onchange="spieler[${i}][0]=this.value;save()"></td>
 
@@ -107,6 +136,7 @@ ${slider(i,3)}
 ${slider(i,4)}
 ${slider(i,5)}
 ${slider(i,6)}
+${slider(i,7)}
 
 <td><button onclick="removeSpieler(${i})">❌</button></td>
 `;
@@ -114,19 +144,8 @@ ${slider(i,6)}
   });
 }
 
-function slider(i, idx) {
-  return `
-<td>
-<input type="range" min="1" max="5" value="${spieler[i][idx]}"
-oninput="spieler[${i}][${idx}]=Number(this.value);
-document.getElementById('v${i}_${idx}').innerText=this.value;
-save()">
-<br><span id="v${i}_${idx}">${spieler[i][idx]}</span>
-</td>`;
-}
-
 function addSpieler() {
-  spieler.push(["Neu",1,3,3,3,3,3]);
+  spieler.push(["Neu",1,3,3,3,3,3,3]);
   save();
   renderTable();
 }
@@ -141,41 +160,47 @@ function removeSpieler(i) {
 // ⚽ TEAMLOGIK
 // ===============================
 function staerke(s) {
-  return s.Ballkontrolle+s.Laufbereitschaft+s.Spielintelligenz+s.Defensiv+s.Offensiv;
+  return s.Ballkontrolle +
+         s.Laufbereitschaft +
+         s.Spielintelligenz +
+         s.Defensiv +
+         s.Offensiv +
+         s.Chancenverwertung;
 }
 
 function berechneTeams() {
   const aktive = spieler
-    .filter(s=>s[1]===1)
-    .map(s=>({
-      Name:s[0],
-      Ballkontrolle:s[2],
-      Laufbereitschaft:s[3],
-      Spielintelligenz:s[4],
-      Defensiv:s[5],
-      Offensiv:s[6]
+    .filter(s => s[1] === 1)
+    .map(s => ({
+      Name: s[0],
+      Ballkontrolle: s[2],
+      Laufbereitschaft: s[3],
+      Spielintelligenz: s[4],
+      Defensiv: s[5],
+      Offensiv: s[6],
+      Chancenverwertung: s[7]
     }));
 
-  aktive.forEach(s=>s.Staerke=staerke(s));
+  aktive.forEach(s => s.Staerke = staerke(s));
   aktive.sort((a,b)=>b.Staerke-a.Staerke);
 
-  let teams = Array.from({length:ANZAHL_MANNSCHAFTEN},
-    ()=>({Spieler:[],Staerke:0}));
+  let teams = Array.from({length: anzahlMannschaften},
+    () => ({Spieler:[], Staerke:0}));
 
-  let idx=0,dir=1;
-  for(let sp of aktive){
+  let idx=0, dir=1;
+  for (let sp of aktive) {
     teams[idx].Spieler.push(sp);
-    teams[idx].Staerke+=sp.Staerke;
-    idx+=dir;
-    if(idx===ANZAHL_MANNSCHAFTEN){idx--;dir=-1;}
-    if(idx<0){idx=0;dir=1;}
+    teams[idx].Staerke += sp.Staerke;
+    idx += dir;
+    if (idx === anzahlMannschaften) { idx--; dir=-1; }
+    if (idx < 0) { idx=0; dir=1; }
   }
 
-  const out=document.getElementById("output");
-  out.innerHTML="<h2>🏁 Mannschaften</h2>";
+  const out = document.getElementById("output");
+  out.innerHTML = "<h2>🏁 Mannschaften</h2>";
 
   teams.forEach((t,i)=>{
-    out.innerHTML+=`
+    out.innerHTML += `
 <div class="team">
 <b>Mannschaft ${i+1}</b> |
 Spieler: ${t.Spieler.length} |
