@@ -115,7 +115,7 @@ label {
 // ===============================
 // KONFIGURATION
 // ===============================
-const STORAGE_KEY = "teamgenerator_full_v1";
+const STORAGE_KEY = "teamgenerator_full_v2";
 const EDIT_PASSWORT = "1406";
 
 const VARIANCE_MODES = [
@@ -240,17 +240,21 @@ ${editMode ? `
 }
 
 // ===============================
-// TEAMLOGIK + VARIANZ
+// TEAMLOGIK + AUSGABE
 // ===============================
+function spielerStaerke(s) {
+  return s.slice(2).reduce((a,b)=>a+b,0);
+}
+
 function berechneTeams() {
   const aktive = spieler.filter(s=>s[1]);
   const variance = VARIANCE_MODES[varianceIndex].value;
 
   const sortiert = aktive
     .map(s=>{
-      const base = s.slice(2).reduce((a,b)=>a+b,0);
+      const base = spielerStaerke(s);
       const noise = (Math.random()-0.5) * variance/100 * base;
-      return { name:s[0], score:base + noise };
+      return { name:s[0], base, score: base + noise };
     })
     .sort((a,b)=>b.score-a.score);
 
@@ -258,7 +262,7 @@ function berechneTeams() {
   let idx=0, dir=1;
 
   sortiert.forEach(sp=>{
-    teamArr[idx].push(sp.name);
+    teamArr[idx].push(sp);
     idx += dir;
     if (idx === teams) { idx--; dir = -1; }
     if (idx < 0) { idx = 0; dir = 1; }
@@ -268,10 +272,15 @@ function berechneTeams() {
   out.innerHTML = "";
 
   teamArr.forEach((t,i)=>{
+    const sum = t.reduce((s,p)=>s+p.base,0);
+    const avg = t.length ? (sum / t.length).toFixed(1) : "–";
+
     out.innerHTML += `
 <div class="team-card">
-<b>Mannschaft ${i+1}</b><br>
-${t.join(", ")}
+<b>Mannschaft ${i+1}</b> |
+Spieler: ${t.length} |
+Ø Stärke: ${avg}<br>
+${t.map(p=>p.name).join(", ")}
 </div>`;
   });
 }
