@@ -13,14 +13,14 @@ body {
   background: #f4f6f8;
 }
 
-h1, h2 { margin-top: 0.5em; }
-
 .section {
   background: white;
   border-radius: 14px;
   padding: 14px;
   margin-bottom: 16px;
 }
+
+h1, h2 { margin-top: 0.5em; }
 
 label {
   font-weight: 600;
@@ -47,16 +47,13 @@ button.secondary {
   color: black;
 }
 
-/* ===============================
-   👥 SPIELER SWIPE UI
-=============================== */
-
+/* Swipe-UI */
 .player-wrapper {
-  overflow-x: auto;
   display: flex;
+  overflow-x: auto;
   scroll-snap-type: x mandatory;
-  border-radius: 12px;
   margin-bottom: 12px;
+  border-radius: 12px;
 }
 
 .player-compact,
@@ -69,13 +66,13 @@ button.secondary {
 
 .player-compact {
   display: flex;
-  justify-content: space-between;
+  gap: 8px;
   align-items: center;
 }
 
 .player-compact input {
-  font-size: 16px;
   flex: 1;
+  font-size: 16px;
 }
 
 .player-edit {
@@ -122,8 +119,10 @@ button.secondary {
 
 <script>
 // ===============================
-// DATEN
+// 🔐 KONFIGURATION
 // ===============================
+const STORAGE_KEY = "teamgenerator_final_v1";
+
 const VARIANCE_MODES = [
   { value: 0, label: "Fair‑Modus" },
   { value: 30, label: "Trainings‑Mix" },
@@ -131,18 +130,59 @@ const VARIANCE_MODES = [
   { value: 100, label: "Spaß‑Modus" }
 ];
 
-let teams = 4;
-let varianceIndex = 0;
-
-let spieler = [
+// ===============================
+// ✅ VOLLSTÄNDIGE SPIELERLISTE
+// [Name, Anwesend, Ball, Lauf, IQ, Def, Off, Chancen]
+const INITIAL_SPIELER = [
 ["Alex Gruen",1,3,3,3,3,3,3],
+["Alex Koerkel",1,3,2,3,4,3,3],
+["Andi Doerr",1,3,2,2,3,2,2],
+["Birk",1,4,4,3,4,3,3],
+["Christian",1,2,5,1,2,1,1],
+["Daniel",1,3,2,2,3,4,3],
+["Dominik",1,3,1,2,1,3,2],
+["Erik",1,5,1,5,1,3,3],
 ["Frank",1,5,5,5,4,4,5],
+["Jens",1,3,4,3,3,4,3],
 ["Jonas",1,4,5,4,4,4,4],
-["Moser",1,4,3,4,3,4,3]
+["Josua",1,4,3,5,5,3,4],
+["Martin",1,1,5,2,3,3,2],
+["Mehmet",1,4,3,3,2,4,3],
+["Sebastian",1,2,2,2,3,2,2],
+["Simon",1,3,3,3,4,3,3],
+["Soeren",1,3,3,3,4,3,3],
+["Xeber",1,4,5,4,3,4,4],
+["Moser",1,4,3,4,3,4,3],
+["Andi K",1,3,4,3,4,3,3]
 ];
 
 // ===============================
-// UI INIT
+// 🔄 LOAD (NIEMALS ÜBERSCHREIBEN)
+// ===============================
+let data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+if (!data) {
+  data = {
+    teams: 4,
+    varianceIndex: 0,
+    spieler: structuredClone(INITIAL_SPIELER)
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let { teams, varianceIndex, spieler } = data;
+
+// ===============================
+// 💾 SAVE
+// ===============================
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    teams, varianceIndex, spieler
+  }));
+}
+
+// ===============================
+// ⚙️ SETTINGS UI
 // ===============================
 const teamInput = document.getElementById("teamCount");
 const varianceInput = document.getElementById("variance");
@@ -152,13 +192,15 @@ teamInput.value = teams;
 varianceInput.value = varianceIndex;
 varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
 
+teamInput.oninput = () => { teams = +teamInput.value; save(); };
 varianceInput.oninput = () => {
   varianceIndex = +varianceInput.value;
   varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
+  save();
 };
 
 // ===============================
-// SPIELER UI
+// 👥 SPIELER UI (SWIPE)
 // ===============================
 function renderSpieler() {
   const div = document.getElementById("spieler");
@@ -167,54 +209,50 @@ function renderSpieler() {
   spieler.forEach((s,i)=>{
     div.innerHTML += `
 <div class="player-wrapper">
-
-  <!-- KOMPAKT -->
   <div class="player-compact">
-    <input value="${s[0]}" onchange="spieler[${i}][0]=this.value">
-    <select onchange="spieler[${i}][1]=+this.value">
+    <input value="${s[0]}" onchange="spieler[${i}][0]=this.value;save()">
+    <select onchange="spieler[${i}][1]=+this.value;save()">
       <option value="1" ${s[1]?"selected":""}>✅</option>
       <option value="0" ${!s[1]?"selected":""}>❌</option>
     </select>
   </div>
 
-  <!-- EDIT (Swipe links) -->
   <div class="player-edit">
     ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
       <label>${n}: ${s[j+2]}</label>
       <input type="range" min="1" max="5" value="${s[j+2]}"
-        oninput="spieler[${i}][${j+2}]=+this.value;renderSpieler()">
+        oninput="spieler[${i}][${j+2}]=+this.value;save();renderSpieler()">
     `).join("")}
     <button class="secondary" onclick="removeSpieler(${i})">❌ Spieler löschen</button>
   </div>
-
 </div>`;
   });
 }
 
 function addSpieler() {
   spieler.push(["Neu",1,3,3,3,3,3,3]);
+  save();
   renderSpieler();
 }
 
 function removeSpieler(i) {
   spieler.splice(i,1);
+  save();
   renderSpieler();
 }
 
 // ===============================
-// TEAMLOGIK
+// ⚽ TEAMLOGIK
 // ===============================
 function berechneTeams() {
-  const aktive = spieler.filter(s=>s[1]);
   const variance = VARIANCE_MODES[varianceIndex].value;
+  const aktive = spieler.filter(s=>s[1]);
 
-  const sortiert = aktive
-    .map(s=>{
-      const base = s.slice(2).reduce((a,b)=>a+b,0);
-      const noise = (Math.random()-0.5)*variance/100*base;
-      return {name:s[0], score:base+noise};
-    })
-    .sort((a,b)=>b.score-a.score);
+  const sortiert = aktive.map(s=>{
+    const base = s.slice(2).reduce((a,b)=>a+b,0);
+    const noise = (Math.random()-0.5)*variance/100*base;
+    return { name:s[0], score:base+noise };
+  }).sort((a,b)=>b.score-a.score);
 
   let arr = Array.from({length:teams},()=>[]);
   let idx=0,dir=1;
@@ -229,11 +267,14 @@ function berechneTeams() {
   const out=document.getElementById("output");
   out.innerHTML="";
   arr.forEach((t,i)=>{
-    out.innerHTML+=`<div class="team-card"><b>Mannschaft ${i+1}</b><br>${t.join(", ")}</div>`;
+    out.innerHTML+=`
+<div class="team-card">
+<b>Mannschaft ${i+1}</b><br>
+${t.join(", ")}
+</div>`;
   });
 }
 
-// ===============================
 renderSpieler();
 </script>
 
