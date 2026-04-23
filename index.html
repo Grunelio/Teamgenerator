@@ -2,255 +2,243 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>⚽ Teamgenerator Offline</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ Teamgenerator</title>
+
 <style>
-body { font-family: Arial, sans-serif; padding: 20px; }
-table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-input[type=range] { width: 90px; }
-input[type=number] { width: 60px; }
-button { padding: 6px 10px; margin: 5px; }
-.team { margin-bottom: 12px; }
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  margin: 0;
+  padding: 16px;
+  background: #f4f6f8;
+}
+
+h1, h2 { margin-top: 0.5em; }
+
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+label {
+  font-weight: bold;
+  display: block;
+  margin-top: 10px;
+}
+
+input[type=range] {
+  width: 100%;
+}
+
+input[type=number] {
+  width: 80px;
+  font-size: 16px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #007aff;
+  color: white;
+}
+
+button.secondary {
+  background: #ddd;
+  color: black;
+}
+
+.player-card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.player-header input {
+  font-size: 16px;
+  width: 60%;
+}
+
+.team-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
 </style>
 </head>
+
 <body>
 
-<h1>⚽ Teamgenerator (Offline)</h1>
+<h1>⚽ Teamgenerator</h1>
 
+<div class="section">
 <h2>⚙️ Einstellungen</h2>
-<label>
-Anzahl Mannschaften:
-<input type="number" min="2" max="10" id="teamCount">
-</label>
 
-<hr>
+<label>Anzahl Mannschaften</label>
+<input type="number" id="teamCount" min="2" max="10">
 
-<h2>👥 Spielerliste</h2>
+<label>🎲 Varianz (Durchmischung)</label>
+<input type="range" min="0" max="100" id="variance">
+<span id="varianceLabel"></span>
+</div>
 
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Anwesend</th>
-<th>Ball</th>
-<th>Lauf</th>
-<th>IQ</th>
-<th>Def</th>
-<th>Off</th>
-<th>Chancen</th>
-<th>❌</th>
-</tr>
-</thead>
-<tbody id="spielerTable"></tbody>
-</table>
+<div class="section">
+<h2>👥 Spieler</h2>
+<div id="spieler"></div>
+<button class="secondary" onclick="addSpieler()">➕ Spieler hinzufügen</button>
+</div>
 
-<button onclick="addSpieler()">➕ Spieler hinzufügen</button>
+<div class="section">
 <button onclick="berechneTeams()">⚽ Teams berechnen</button>
+</div>
 
-<hr>
+<div class="section">
+<h2>🏁 Mannschaften</h2>
 <div id="output"></div>
+</div>
 
 <script>
 // ===============================
-// 🔐 DATA VERSIONING
+// DATA
 // ===============================
-const DATA_VERSION = 2;
-const STORAGE_KEY = "teamgenerator_data";
+const STORAGE_KEY = "teamgen_v3";
 
-// ===============================
-// 👥 DEFAULT SPIELER
-// Struktur:
-// [Name, Anwesend, Ball, Lauf, IQ, Def, Off, Chancen]
 const defaultSpieler = [
 ["Alex Gruen",1,3,3,3,3,3,3],
-["Alex Koerkel",1,3,2,3,4,3,3],
-["Andi Doerr",1,3,2,2,3,2,2],
-["Birk",1,4,4,3,4,3,3],
-["Christian",1,2,5,1,2,1,1],
-["Daniel",1,3,2,2,3,4,3],
-["Dominik",1,3,1,2,1,3,2],
-["Erik",1,5,1,5,1,3,3],
 ["Frank",1,5,5,5,4,4,5],
-["Jens",1,3,4,3,3,4,3],
 ["Jonas",1,4,5,4,4,4,4],
-["Josua",1,4,3,5,5,3,4],
-["Martin",1,1,5,2,3,3,2],
-["Mehmet",1,4,3,3,2,4,3],
-["Sebastian",1,2,2,2,3,2,2],
-["Simon",1,3,3,3,4,3,3],
-["Soeren",1,3,3,3,4,3,3],
-["Xeber",1,4,5,4,3,4,4],
 ["Moser",1,4,3,4,3,4,3],
-["Andi K",1,3,4,3,4,3,3]
 ];
 
-// ===============================
-// 🔄 LOAD + MIGRATION
-// ===============================
-function loadData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+  teams: 4,
+  variance: 0,
+  spieler: defaultSpieler
+};
 
-  if (!raw) {
-    return {
-      version: DATA_VERSION,
-      teams: 4,
-      spieler: structuredClone(defaultSpieler)
-    };
-  }
-
-  const data = JSON.parse(raw);
-
-  // ✅ Migration alter Versionen
-  if (!data.version || data.version < DATA_VERSION) {
-    data.spieler = data.spieler.map(s => {
-      // alte Spieler ohne Chancenverwertung
-      if (s.length === 7) s.push(3);
-      return s;
-    });
-    data.version = DATA_VERSION;
-  }
-
-  return data;
-}
-
-let data = loadData();
-let spieler = data.spieler;
-let anzahlMannschaften = data.teams;
+let { teams, variance, spieler } = data;
 
 // ===============================
-// 💾 SAVE
+// SAVE
 // ===============================
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    version: DATA_VERSION,
-    teams: anzahlMannschaften,
-    spieler: spieler
-  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, variance, spieler }));
 }
 
 // ===============================
-// ⚙️ SETTINGS
+// UI INIT
 // ===============================
 const teamInput = document.getElementById("teamCount");
-teamInput.value = anzahlMannschaften;
-teamInput.onchange = () => {
-  anzahlMannschaften = Number(teamInput.value);
+const varianceInput = document.getElementById("variance");
+const varianceLabel = document.getElementById("varianceLabel");
+
+teamInput.value = teams;
+varianceInput.value = variance;
+varianceLabel.innerText = variance + "%";
+
+teamInput.oninput = () => { teams = +teamInput.value; save(); };
+varianceInput.oninput = () => {
+  variance = +varianceInput.value;
+  varianceLabel.innerText = variance + "%";
   save();
 };
 
 // ===============================
-// 🧱 UI
+// SPIELER UI
 // ===============================
-function slider(i, idx) {
-  return `
-<td>
-<input type="range" min="1" max="5" value="${spieler[i][idx]}"
-oninput="
-spieler[${i}][${idx}] = Number(this.value);
-document.getElementById('v${i}_${idx}').innerText = this.value;
-save();
-">
-<br><span id="v${i}_${idx}">${spieler[i][idx]}</span>
-</td>`;
-}
+function renderSpieler() {
+  const div = document.getElementById("spieler");
+  div.innerHTML = "";
 
-function renderTable() {
-  const tbody = document.getElementById("spielerTable");
-  tbody.innerHTML = "";
+  spieler.forEach((s,i)=>{
+    div.innerHTML += `
+<div class="player-card">
+  <div class="player-header">
+    <input value="${s[0]}" onchange="spieler[${i}][0]=this.value;save()">
+    <select onchange="spieler[${i}][1]=+this.value;save()">
+      <option value="1" ${s[1]?"selected":""}>✅</option>
+      <option value="0" ${!s[1]?"selected":""}>❌</option>
+    </select>
+  </div>
 
-  spieler.forEach((s, i) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-<td><input value="${s[0]}" onchange="spieler[${i}][0]=this.value;save()"></td>
+  ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
+    <label>${n}: ${s[j+2]}</label>
+    <input type="range" min="1" max="5" value="${s[j+2]}"
+      oninput="spieler[${i}][${j+2}]=+this.value;renderSpieler();save()">
+  `).join("")}
 
-<td>
-<select onchange="spieler[${i}][1]=Number(this.value);save()">
-<option value="1" ${s[1]===1?"selected":""}>Anwesend</option>
-<option value="0" ${s[1]===0?"selected":""}>Abwesend</option>
-</select>
-</td>
-
-${slider(i,2)}
-${slider(i,3)}
-${slider(i,4)}
-${slider(i,5)}
-${slider(i,6)}
-${slider(i,7)}
-
-<td><button onclick="removeSpieler(${i})">❌</button></td>
-`;
-    tbody.appendChild(tr);
+  <button class="secondary" onclick="removeSpieler(${i})">❌ Spieler löschen</button>
+</div>`;
   });
 }
 
 function addSpieler() {
   spieler.push(["Neu",1,3,3,3,3,3,3]);
   save();
-  renderTable();
+  renderSpieler();
 }
 
 function removeSpieler(i) {
   spieler.splice(i,1);
   save();
-  renderTable();
+  renderSpieler();
 }
 
 // ===============================
-// ⚽ TEAMLOGIK
+// TEAMLOGIK + VARIANZ
 // ===============================
 function staerke(s) {
-  return s.Ballkontrolle +
-         s.Laufbereitschaft +
-         s.Spielintelligenz +
-         s.Defensiv +
-         s.Offensiv +
-         s.Chancenverwertung;
+  return s.slice(2).reduce((a,b)=>a+b,0);
 }
 
 function berechneTeams() {
-  const aktive = spieler
-    .filter(s => s[1] === 1)
-    .map(s => ({
-      Name: s[0],
-      Ballkontrolle: s[2],
-      Laufbereitschaft: s[3],
-      Spielintelligenz: s[4],
-      Defensiv: s[5],
-      Offensiv: s[6],
-      Chancenverwertung: s[7]
-    }));
+  const aktive = spieler.filter(s=>s[1]);
 
-  aktive.forEach(s => s.Staerke = staerke(s));
-  aktive.sort((a,b)=>b.Staerke-a.Staerke);
+  const berechnet = aktive.map(s=>{
+    const base = staerke(s);
+    const noise = (Math.random()-0.5) * variance / 100 * base;
+    return { name:s[0], score: base + noise };
+  });
 
-  let teams = Array.from({length: anzahlMannschaften},
-    () => ({Spieler:[], Staerke:0}));
+  berechnet.sort((a,b)=>b.score-a.score);
 
-  let idx=0, dir=1;
-  for (let sp of aktive) {
-    teams[idx].Spieler.push(sp);
-    teams[idx].Staerke += sp.Staerke;
-    idx += dir;
-    if (idx === anzahlMannschaften) { idx--; dir=-1; }
-    if (idx < 0) { idx=0; dir=1; }
+  let teamsArr = Array.from({length:teams},()=>[]);
+  let idx=0,dir=1;
+
+  for(let sp of berechnet){
+    teamsArr[idx].push(sp.name);
+    idx+=dir;
+    if(idx===teams){idx--;dir=-1;}
+    if(idx<0){idx=0;dir=1;}
   }
 
   const out = document.getElementById("output");
-  out.innerHTML = "<h2>🏁 Mannschaften</h2>";
+  out.innerHTML = "";
 
-  teams.forEach((t,i)=>{
+  teamsArr.forEach((t,i)=>{
     out.innerHTML += `
-<div class="team">
-<b>Mannschaft ${i+1}</b> |
-Spieler: ${t.Spieler.length} |
-Ø ${(t.Staerke/t.Spieler.length).toFixed(2)}<br>
-${t.Spieler.map(s=>s.Name).join(", ")}
+<div class="team-card">
+<b>Mannschaft ${i+1}</b><br>
+${t.join(", ")}
 </div>`;
   });
 }
 
 // ===============================
-renderTable();
+renderSpieler();
 </script>
 
 </body>
