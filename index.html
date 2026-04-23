@@ -25,17 +25,11 @@ h1, h2 { margin-top: 0.5em; }
 label {
   font-weight: 600;
   display: block;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
-input[type=range] {
-  width: 100%;
-}
-
-input[type=number] {
-  width: 80px;
-  font-size: 16px;
-}
+input[type=range] { width: 100%; }
+input[type=number] { width: 80px; font-size: 16px; }
 
 button {
   width: 100%;
@@ -53,26 +47,39 @@ button.secondary {
   color: black;
 }
 
-.player-card {
-  border: 1px solid #ddd;
+/* ===============================
+   👥 SPIELER SWIPE UI
+=============================== */
+
+.player-wrapper {
+  overflow-x: auto;
+  display: flex;
+  scroll-snap-type: x mandatory;
   border-radius: 12px;
-  padding: 12px;
   margin-bottom: 12px;
 }
 
-.player-header {
+.player-compact,
+.player-edit {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  padding: 12px;
+  background: #fff;
+}
+
+.player-compact {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
   align-items: center;
 }
 
-.player-header input {
-  flex: 1;
+.player-compact input {
   font-size: 16px;
+  flex: 1;
 }
 
-.player-header select {
-  font-size: 16px;
+.player-edit {
+  background: #f9f9f9;
 }
 
 .team-card {
@@ -94,10 +101,7 @@ button.secondary {
 <label>Anzahl Mannschaften</label>
 <input type="number" id="teamCount" min="2" max="10">
 
-<label>
-🎲 Modus:
-<strong><span id="varLabel"></span></strong>
-</label>
+<label>🎲 Modus: <strong><span id="varLabel"></span></strong></label>
 <input type="range" min="0" max="3" step="1" id="variance">
 </div>
 
@@ -118,93 +122,27 @@ button.secondary {
 
 <script>
 // ===============================
-// 🔐 VERSIONIERUNG
-// ===============================
-const DATA_VERSION = 4;
-const STORAGE_KEY = "teamgenerator_data";
-
-// ===============================
-// 🎲 VARIANZ-MODI
+// DATEN
 // ===============================
 const VARIANCE_MODES = [
-  { value: 0,   label: "Fair‑Modus" },
-  { value: 30,  label: "Trainings‑Mix" },
-  { value: 60,  label: "Herausforderungs‑Modus" },
+  { value: 0, label: "Fair‑Modus" },
+  { value: 30, label: "Trainings‑Mix" },
+  { value: 60, label: "Herausforderungs‑Modus" },
   { value: 100, label: "Spaß‑Modus" }
 ];
 
-// ===============================
-// 👥 SPIELERLISTE
-// [Name, Anwesend, Ball, Lauf, IQ, Def, Off, Chancen]
-const defaultSpieler = [
+let teams = 4;
+let varianceIndex = 0;
+
+let spieler = [
 ["Alex Gruen",1,3,3,3,3,3,3],
-["Alex Koerkel",1,3,2,3,4,3,3],
-["Andi Doerr",1,3,2,2,3,2,2],
-["Birk",1,4,4,3,4,3,3],
-["Christian",1,2,5,1,2,1,1],
-["Daniel",1,3,2,2,3,4,3],
-["Dominik",1,3,1,2,1,3,2],
-["Erik",1,5,1,5,1,3,3],
 ["Frank",1,5,5,5,4,4,5],
-["Jens",1,3,4,3,3,4,3],
 ["Jonas",1,4,5,4,4,4,4],
-["Josua",1,4,3,5,5,3,4],
-["Martin",1,1,5,2,3,3,2],
-["Mehmet",1,4,3,3,2,4,3],
-["Sebastian",1,2,2,2,3,2,2],
-["Simon",1,3,3,3,4,3,3],
-["Soeren",1,3,3,3,4,3,3],
-["Xeber",1,4,5,4,3,4,4],
-["Moser",1,4,3,4,3,4,3],
-["Andi K",1,3,4,3,4,3,3]
+["Moser",1,4,3,4,3,4,3]
 ];
 
 // ===============================
-// 🔄 LOAD + MIGRATION
-// ===============================
-function loadData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return {
-      version: DATA_VERSION,
-      teams: 4,
-      varianceIndex: 0,
-      spieler: structuredClone(defaultSpieler)
-    };
-  }
-
-  const data = JSON.parse(raw);
-
-  if (!data.version || data.version < DATA_VERSION) {
-    data.spieler = data.spieler.map(s => {
-      while (s.length < 8) s.push(3);
-      return s;
-    });
-    data.version = DATA_VERSION;
-  }
-
-  return data;
-}
-
-let data = loadData();
-let spieler = data.spieler;
-let teams = data.teams;
-let varianceIndex = data.varianceIndex;
-
-// ===============================
-// 💾 SAVE
-// ===============================
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    version: DATA_VERSION,
-    teams,
-    varianceIndex,
-    spieler
-  }));
-}
-
-// ===============================
-// ⚙️ SETTINGS UI
+// UI INIT
 // ===============================
 const teamInput = document.getElementById("teamCount");
 const varianceInput = document.getElementById("variance");
@@ -212,22 +150,15 @@ const varLabel = document.getElementById("varLabel");
 
 teamInput.value = teams;
 varianceInput.value = varianceIndex;
-varLabel.innerText = `${VARIANCE_MODES[varianceIndex].label} (${VARIANCE_MODES[varianceIndex].value}%)`;
-
-teamInput.oninput = () => {
-  teams = +teamInput.value;
-  save();
-};
+varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
 
 varianceInput.oninput = () => {
   varianceIndex = +varianceInput.value;
-  varLabel.innerText =
-    `${VARIANCE_MODES[varianceIndex].label} (${VARIANCE_MODES[varianceIndex].value}%)`;
-  save();
+  varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
 };
 
 // ===============================
-// 👥 SPIELER UI
+// SPIELER UI
 // ===============================
 function renderSpieler() {
   const div = document.getElementById("spieler");
@@ -235,76 +166,70 @@ function renderSpieler() {
 
   spieler.forEach((s,i)=>{
     div.innerHTML += `
-<div class="player-card">
-  <div class="player-header">
-    <input value="${s[0]}" onchange="spieler[${i}][0]=this.value;save()">
-    <select onchange="spieler[${i}][1]=+this.value;save()">
+<div class="player-wrapper">
+
+  <!-- KOMPAKT -->
+  <div class="player-compact">
+    <input value="${s[0]}" onchange="spieler[${i}][0]=this.value">
+    <select onchange="spieler[${i}][1]=+this.value">
       <option value="1" ${s[1]?"selected":""}>✅</option>
       <option value="0" ${!s[1]?"selected":""}>❌</option>
     </select>
   </div>
 
-  ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
-    <label>${n}: ${s[j+2]}</label>
-    <input type="range" min="1" max="5" value="${s[j+2]}"
-      oninput="spieler[${i}][${j+2}]=+this.value;renderSpieler();save()">
-  `).join("")}
+  <!-- EDIT (Swipe links) -->
+  <div class="player-edit">
+    ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
+      <label>${n}: ${s[j+2]}</label>
+      <input type="range" min="1" max="5" value="${s[j+2]}"
+        oninput="spieler[${i}][${j+2}]=+this.value;renderSpieler()">
+    `).join("")}
+    <button class="secondary" onclick="removeSpieler(${i})">❌ Spieler löschen</button>
+  </div>
 
-  <button class="secondary" onclick="removeSpieler(${i})">❌ Spieler löschen</button>
 </div>`;
   });
 }
 
 function addSpieler() {
   spieler.push(["Neu",1,3,3,3,3,3,3]);
-  save();
   renderSpieler();
 }
 
 function removeSpieler(i) {
   spieler.splice(i,1);
-  save();
   renderSpieler();
 }
 
 // ===============================
-// ⚽ TEAMLOGIK + VARIANZ
+// TEAMLOGIK
 // ===============================
-function basisStaerke(s) {
-  return s.slice(2).reduce((a,b)=>a+b,0);
-}
-
 function berechneTeams() {
   const aktive = spieler.filter(s=>s[1]);
   const variance = VARIANCE_MODES[varianceIndex].value;
 
-  const berechnet = aktive.map(s=>{
-    const base = basisStaerke(s);
-    const noise = (Math.random()-0.5) * (variance/100) * base;
-    return { name:s[0], score: base + noise };
-  });
+  const sortiert = aktive
+    .map(s=>{
+      const base = s.slice(2).reduce((a,b)=>a+b,0);
+      const noise = (Math.random()-0.5)*variance/100*base;
+      return {name:s[0], score:base+noise};
+    })
+    .sort((a,b)=>b.score-a.score);
 
-  berechnet.sort((a,b)=>b.score-a.score);
-
-  let teamsArr = Array.from({length:teams},()=>[]);
+  let arr = Array.from({length:teams},()=>[]);
   let idx=0,dir=1;
 
-  for(let sp of berechnet){
-    teamsArr[idx].push(sp.name);
+  sortiert.forEach(sp=>{
+    arr[idx].push(sp.name);
     idx+=dir;
     if(idx===teams){idx--;dir=-1;}
     if(idx<0){idx=0;dir=1;}
-  }
+  });
 
-  const out = document.getElementById("output");
-  out.innerHTML = "";
-
-  teamsArr.forEach((t,i)=>{
-    out.innerHTML += `
-<div class="team-card">
-<b>Mannschaft ${i+1}</b><br>
-${t.join(", ")}
-</div>`;
+  const out=document.getElementById("output");
+  out.innerHTML="";
+  arr.forEach((t,i)=>{
+    out.innerHTML+=`<div class="team-card"><b>Mannschaft ${i+1}</b><br>${t.join(", ")}</div>`;
   });
 }
 
