@@ -80,7 +80,7 @@ const defaultSpieler = [
 ["Soeren",1,3,3,3,4,3,3],
 ["Xeber",1,4,5,4,3,4,4],
 ["Moser",1,4,3,4,3,4,3],
-["Andi K",1,3,4,3,4,3,3],
+["Andi K",1,3,4,3,4,3,3]
 ];
 
 let spieler = JSON.parse(localStorage.getItem(STORAGE_KEY_SPIELER)) || defaultSpieler;
@@ -95,7 +95,7 @@ function save() {
 }
 
 // ===============================
-// 🧱 UI
+// ⚙️ SETTINGS
 // ===============================
 const teamInput = document.getElementById("teamCount");
 teamInput.value = anzahlMannschaften;
@@ -104,13 +104,18 @@ teamInput.onchange = () => {
   save();
 };
 
+// ===============================
+// 🧱 UI
+// ===============================
 function slider(i, idx) {
   return `
 <td>
 <input type="range" min="1" max="5" value="${spieler[i][idx]}"
-oninput="spieler[${i}][${idx}]=Number(this.value);
-document.getElementById('v${i}_${idx}').innerText=this.value;
-save()">
+oninput="
+spieler[${i}][${idx}] = Number(this.value);
+document.getElementById('v${i}_${idx}').innerText = this.value;
+save();
+">
 <br><span id="v${i}_${idx}">${spieler[i][idx]}</span>
 </td>`;
 }
@@ -126,8 +131,8 @@ function renderTable() {
 
 <td>
 <select onchange="spieler[${i}][1]=Number(this.value);save()">
-<option value="1" ${s[1]==1?"selected":""}>Anwesend</option>
-<option value="0" ${s[1]==0?"selected":""}>Abwesend</option>
+<option value="1" ${s[1]===1 ? "selected":""}>Anwesend</option>
+<option value="0" ${s[1]===0 ? "selected":""}>Abwesend</option>
 </select>
 </td>
 
