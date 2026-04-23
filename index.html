@@ -44,9 +44,7 @@ input[type=number] {
   padding: 8px;
 }
 
-input[type=range] {
-  width: 100%;
-}
+input[type=range] { width: 100%; }
 
 .player {
   padding: 12px;
@@ -59,8 +57,8 @@ input[type=range] {
 .player.absent  { background: #f0f0f0; color: #999; }
 
 .edit-panel {
-  margin-top: 8px;
   padding-left: 10px;
+  margin-bottom: 10px;
 }
 
 label {
@@ -113,9 +111,10 @@ label {
 
 <script>
 // ===============================
-// KONFIGURATION
+// ✅ STABILE KONFIGURATION
 // ===============================
-const STORAGE_KEY = "teamgenerator_full_v2";
+const STORAGE_KEY = "teamgenerator_stable_v3";
+const DATA_VERSION = 3;
 const EDIT_PASSWORT = "1406";
 
 const VARIANCE_MODES = [
@@ -160,11 +159,13 @@ const INITIAL_SPIELER = [
 ];
 
 // ===============================
-// LOAD / SAVE
+// ✅ LOAD + VERSIONIERUNG
 // ===============================
 let data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-if (!data) {
+
+if (!data || data.version !== DATA_VERSION) {
   data = {
+    version: DATA_VERSION,
     spieler: structuredClone(INITIAL_SPIELER),
     teams: 4,
     varianceIndex: 0
@@ -177,7 +178,10 @@ let editMode = false;
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    spieler, teams, varianceIndex
+    version: DATA_VERSION,
+    spieler,
+    teams,
+    varianceIndex
   }));
 }
 
@@ -236,7 +240,6 @@ function renderSpieler() {
      onclick="togglePresent(${i})">
   ${s[0]}
 </div>
-
 ${editMode ? `
 <div class="edit-panel">
   ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
@@ -250,7 +253,7 @@ ${editMode ? `
 }
 
 // ===============================
-// TEAMLOGIK + AUSGABE
+// TEAMLOGIK
 // ===============================
 function spielerStaerke(s) {
   return s.slice(2).reduce((a,b)=>a+b,0);
