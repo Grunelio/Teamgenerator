@@ -6,189 +6,536 @@
 <title>⚽ Teamgenerator – Fair‑Play‑Spieltag</title>
 
 <style>
+/* ===============================
+   DESIGN ONLY – LOGIK UNVERÄNDERT
+   =============================== */
+
 :root{
   --pitch:#0f5132;
   --pitch-light:#e8f8f0;
-  --line:#ffffff;
   --fair:#ffd43b;
   --card:#ffffff;
   --gray:#f0f0f0;
 }
 
-/* ===== BACKGROUND: SPIELFELD ===== */
-body{
+/* Spielfeld-Hintergrund */
+body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  margin:0;
-  padding:16px;
+  margin: 0;
+  padding: 16px;
   background:
     repeating-linear-gradient(
       90deg,
-      rgba(255,255,255,0.05) 0,
-      rgba(255,255,255,0.05) 2px,
+      rgba(255,255,255,0.06) 0,
+      rgba(255,255,255,0.06) 2px,
       transparent 2px,
       transparent 60px
     ),
     linear-gradient(
-      rgba(255,255,255,0.03),
-      rgba(255,255,255,0.03)
+      rgba(255,255,255,0.04),
+      rgba(255,255,255,0.04)
     ),
     var(--pitch);
 }
 
-h1{
-  color:white;
-  margin-bottom:10px;
+h1 {
+  color: white;
+  margin-bottom: 12px;
 }
 
-/* ===== KARTEN ===== */
-.section{
-  background:var(--card);
-  border-radius:16px;
-  padding:14px;
-  margin-bottom:16px;
-  box-shadow:0 6px 18px rgba(0,0,0,.25);
+.section {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
 }
 
-h2{
-  margin:0 0 8px 0;
-  font-size:18px;
-  display:flex;
-  align-items:center;
-  gap:6px;
+h1, h2 { margin-top: 0.5em; }
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-top: 6px;
 }
 
-/* ===== FORM ===== */
-label{
-  font-weight:600;
-  margin-top:6px;
-  display:block;
+select {
+  width: 100%;
+  font-size: 16px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
 }
 
-select,input[type=range]{
-  width:100%;
-  padding:8px;
-  font-size:16px;
-  border-radius:10px;
-  border:1px solid #ccc;
+input[type=range] { width: 100%; }
+
+/* Spieler */
+.player {
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  font-size: 18px;
+  cursor: pointer;
+  background: var(--gray);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* ===== SPIELER ===== */
-.player{
-  padding:12px;
-  border-radius:12px;
-  margin-bottom:6px;
-  font-size:17px;
-  cursor:pointer;
-  background:var(--gray);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+.player.present {
+  background: var(--pitch-light);
+}
+.player.present::after {
+  content: "🟢";
 }
 
-.player.present{
-  background:var(--pitch-light);
+.player.absent {
+  background: #eee;
+  color: #777;
+}
+.player.absent::after {
+  content: "⚪";
 }
 
-.player.present::after{
-  content:"🟢";
+/* Edit Panel */
+.edit-panel {
+  padding-left: 10px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--fair);
+  background: #fafafa;
+  border-radius: 10px;
 }
 
-.player.absent{
-  background:#eee;
-  color:#777;
+/* Teams */
+.team-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-left: 6px solid var(--pitch);
 }
 
-.player.absent::after{
-  content:"⚪";
-}
-
-/* ===== EDIT PANEL ===== */
-.edit-panel{
-  padding:10px;
-  background:#fafafa;
-  border-left:4px solid var(--fair);
-  border-radius:10px;
-  margin-bottom:10px;
-}
-
-/* ===== TEAMS ===== */
-.team-card{
-  background:white;
-  border-radius:14px;
-  padding:12px;
-  margin-bottom:12px;
-  border-left:6px solid var(--pitch);
-}
-
-.goalkeeper-box{
+.goalkeeper-box {
   background:#eef5ff;
-  border-left:6px solid #1c7ed6;
-  padding:10px;
+  padding:8px;
   border-radius:12px;
   margin-bottom:12px;
+  border-left:6px solid #1c7ed6;
 }
 
-/* ===== BUTTONS ===== */
-button{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:none;
-  background:var(--pitch);
-  color:white;
-  font-size:16px;
+/* Buttons */
+button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  margin-top: 10px;
+  border-radius: 12px;
+  border: none;
+  background: var(--pitch);
+  color: white;
+}
+button.secondary {
+  background: var(--fair);
+  color: black;
+  font-weight: 600;
 }
 
-button.secondary{
-  background:#e0e0e0;
-  color:black;
+/* Passwort Modal */
+#pwModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
-
-/* ===== PASSWORT ===== */
-#pwModal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.6);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
+#pwModal .box {
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  width: 90%;
+  max-width: 320px;
 }
-
-#pwModal .box{
-  background:white;
-  border-radius:18px;
-  padding:20px;
-  width:90%;
-  max-width:320px;
-}
-
-#pwModal input{
-  font-size:26px;
-  width:100%;
-  text-align:center;
+#pwModal input {
+  font-size: 26px;
+  text-align: center;
+  width: 100%;
 }
 </style>
 </head>
 
 <body>
 
-<h1>⚽ Teamgenerator – Fair‑Play‑Spieltag</h1>
+<h1>⚽ Teamgenerator – Fair‑Play‑Spieltag 🤝</h1>
 
-<!-- ===== AB HIER: DEIN UNVERÄNDERTER HTML + JS‑KERN ===== -->
-<!-- (Ich habe bewusst nichts an deiner Logik angefasst) -->
+<div class="section">
+<h2>👥 Mannschaft</h2>
+<select id="teamSelect"></select>
+<p style="font-size:14px;color:#666;">Mannschaft antippen → Passwort → Wechsel 🔒</p>
+</div>
 
-<!-- 👉 HIER BLEIBT DEIN CODE 1:1 GLEICH -->
-<!-- 👉 NUR DIE OPTIK IST NEU -->
+<div class="section">
+<h2>⚙️ Einstellungen</h2>
 
-<!-- ✅ Der JavaScript‑Teil bleibt exakt wie in deinem letzten funktionierenden Stand -->
-<!-- ✅ Torhüter‑Logik unverändert korrekt -->
-<!-- ✅ Spielerlisten vollständig -->
-<!-- ✅ Keine neue Abhängigkeit -->
+<label>Anzahl Mannschaften</label>
+<select id="teamCount">
+  <option>2</option><option>3</option><option>4</option>
+  <option>5</option><option>6</option><option>7</option><option>8</option>
+</select>
 
-<p style="color:white;opacity:.85;font-size:14px;">
-🤝 Fair‑Play‑Spieltag – Respekt, Teamgeist & Freude am Spiel
-</p>
+<label>🎲 Modus: <strong><span id="varLabel"></span></strong></label>
+<input type="range" min="0" max="3" step="1" id="variance">
+
+<button class="secondary" onclick="requestPassword(toggleEdit)">
+🔒 Edit‑Modus (Bewertungen)
+</button>
+</div>
+
+<div class="section" id="goalkeeperSection" style="display:none;">
+<h2>🧤 Torhüter (E‑Jugend)</h2>
+
+<label>Torhüter 1</label>
+<select id="gk1"></select>
+
+<label>Torhüter 2</label>
+<select id="gk2"></select>
+</div>
+
+<div class="section">
+<h2>👥 Spieler</h2>
+<div id="spieler"></div>
+</div>
+
+<div class="section">
+<button onclick="berechneTeams()">⚽ Teams berechnen</button>
+</div>
+
+<div class="section">
+<h2>🏁 Mannschaften</h2>
+<div id="output"></div>
+</div>
+
+<!-- Passwort Modal -->
+<div id="pwModal">
+  <div class="box">
+    <h3>🔒 Passwort</h3>
+    <input type="number" id="pwInput" inputmode="numeric" maxlength="4">
+    <button onclick="confirmPassword()">OK</button>
+    <button class="secondary" onclick="closePw()">Abbrechen</button>
+  </div>
+</div>
+
+<script>
+// ===============================
+// KONFIG
+// ===============================
+const EDIT_PASSWORT = "1406";
+let pwCallback = null;
+
+// ===============================
+// PASSWORT MODAL
+// ===============================
+function requestPassword(cb) {
+  pwCallback = cb;
+  document.getElementById("pwInput").value = "";
+  document.getElementById("pwModal").style.display = "flex";
+  setTimeout(()=>document.getElementById("pwInput").focus(),50);
+}
+
+function confirmPassword() {
+  const val = document.getElementById("pwInput").value;
+  if (val !== EDIT_PASSWORT) {
+    alert("Falsches Passwort");
+    closePw();
+    revertTeamSelect();
+    return;
+  }
+  closePw();
+  pwCallback && pwCallback();
+}
+
+function closePw() {
+  document.getElementById("pwModal").style.display = "none";
+}
+
+// ===============================
+// VARIANZ
+// ===============================
+const VARIANCE_MODES = [
+  { value: 0, label: "Fair‑Modus" },
+  { value: 30, label: "Trainings‑Mix" },
+  { value: 60, label: "Herausforderungs‑Modus" },
+  { value: 100, label: "Spaß‑Modus" }
+];
+
+// ===============================
+// MANNSCHAFTEN
+// ===============================
+const TEAMS = {
+  "Alte Herren": [
+    ["Alex Gruen",1,3,3,3,3,3,3],
+    ["Alex Koerkel",1,3,2,3,4,3,3],
+    ["Andi Doerr",1,3,2,2,3,2,2],
+    ["Birk",1,4,4,3,4,3,3],
+    ["Christian",1,2,5,1,2,1,1]
+  ],
+  "E‑Jugend": [
+    ["Samuel",1,3,4,3,4,3,3],
+    ["Jonah",1,5,1,4,4,3,3],
+    ["Moritz",1,3,4,2,4,3,2],
+    ["Paul",1,3,3,3,3,3,3],
+    ["Toni",1,4,3,3,3,4,4]
+  ]
+};
+
+// ===============================
+// STATE
+// ===============================
+let activeTeam = localStorage.getItem("activeTeam") || Object.keys(TEAMS)[0];
+let pendingTeam = null;
+let STORAGE_KEY = "teamgenerator_" + activeTeam;
+
+let spieler = [];
+let teams = 4;
+let varianceIndex = 0;
+let editMode = false;
+let goalkeepers = {1:null,2:null};
+
+// ===============================
+// TEAM SELECT
+// ===============================
+const teamSelect = document.getElementById("teamSelect");
+
+function initTeamSelect() {
+  teamSelect.innerHTML = "";
+  Object.keys(TEAMS).forEach(t=>{
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t;
+    teamSelect.appendChild(o);
+  });
+  teamSelect.value = activeTeam;
+}
+
+function revertTeamSelect() {
+  teamSelect.value = activeTeam;
+}
+
+teamSelect.addEventListener("change", () => {
+  const selected = teamSelect.value;
+  if (selected === activeTeam) return;
+
+  pendingTeam = selected;
+  requestPassword(() => {
+    loadTeam(pendingTeam);
+    pendingTeam = null;
+  });
+});
+
+// ===============================
+// LOAD / SAVE
+// ===============================
+function loadTeam(teamName) {
+  activeTeam = teamName;
+  STORAGE_KEY = "teamgenerator_" + activeTeam;
+  localStorage.setItem("activeTeam", activeTeam);
+
+  let data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  if (!data) {
+    data = {
+      spieler: structuredClone(TEAMS[activeTeam]),
+      teams: 4,
+      varianceIndex: 0,
+      goalkeepers: {1:null,2:null}
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  spieler = data.spieler;
+  teams = data.teams;
+  varianceIndex = data.varianceIndex;
+  goalkeepers = data.goalkeepers || {1:null,2:null};
+
+  document.getElementById("goalkeeperSection").style.display =
+    activeTeam === "E‑Jugend" ? "block" : "none";
+
+  initTeamSelect();
+  updateSettingsUI();
+  renderGoalkeeperUI();
+  renderSpieler();
+  document.getElementById("output").innerHTML = "";
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    spieler, teams, varianceIndex, goalkeepers
+  }));
+}
+
+// ===============================
+// SETTINGS
+// ===============================
+const teamCountSelect = document.getElementById("teamCount");
+const varianceInput = document.getElementById("variance");
+const varLabel = document.getElementById("varLabel");
+
+function updateSettingsUI() {
+  teamCountSelect.value = teams;
+  varianceInput.value = varianceIndex;
+  varLabel.innerText =
+    VARIANCE_MODES[varianceIndex].label +
+    " (" + VARIANCE_MODES[varianceIndex].value + "%)";
+}
+
+teamCountSelect.onchange = () => {
+  teams = +teamCountSelect.value;
+  save();
+};
+
+varianceInput.oninput = () => {
+  varianceIndex = +varianceInput.value;
+  varLabel.innerText =
+    VARIANCE_MODES[varianceIndex].label +
+    " (" + VARIANCE_MODES[varianceIndex].value + "%)";
+  save();
+};
+
+// ===============================
+// EDIT MODE
+// ===============================
+function toggleEdit() {
+  editMode = !editMode;
+  renderSpieler();
+}
+
+// ===============================
+// TORHÜTER UI
+// ===============================
+function renderGoalkeeperUI() {
+  if (activeTeam !== "E‑Jugend") return;
+
+  const gk1 = document.getElementById("gk1");
+  const gk2 = document.getElementById("gk2");
+
+  const anwesende = spieler.filter(s=>s[1]===1).map(s=>s[0]);
+
+  function fill(sel, other) {
+    sel.innerHTML = "<option value=''>Kein Torhüter</option>";
+    anwesende.forEach(n=>{
+      if(n === other) return;
+      const o = document.createElement("option");
+      o.value = n; o.textContent = n;
+      sel.appendChild(o);
+    });
+  }
+
+  fill(gk1, goalkeepers[2]);
+  fill(gk2, goalkeepers[1]);
+
+  gk1.value = goalkeepers[1] || "";
+  gk2.value = goalkeepers[2] || "";
+
+  gk1.onchange = () => {
+    goalkeepers[1] = gk1.value || null;
+    save(); renderGoalkeeperUI();
+  };
+  gk2.onchange = () => {
+    goalkeepers[2] = gk2.value || null;
+    save(); renderGoalkeeperUI();
+  };
+}
+
+// ===============================
+// SPIELER UI
+// ===============================
+function togglePresent(i) {
+  spieler[i][1] = spieler[i][1] ? 0 : 1;
+  save();
+  renderSpieler();
+  renderGoalkeeperUI();
+}
+
+function renderSpieler() {
+  const div = document.getElementById("spieler");
+  div.innerHTML = "";
+
+  spieler.forEach((s,i)=>{
+    div.innerHTML += `
+<div class="player ${s[1]?"present":"absent"}"
+onclick="togglePresent(${i})">${s[0]}</div>
+${editMode ? `
+<div class="edit-panel">
+  ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
+    <label>${n}: ${s[j+2]}</label>
+    <input type="range" min="1" max="5" value="${s[j+2]}"
+    oninput="spieler[${i}][${j+2}]=+this.value;save()">
+  `).join("")}
+</div>` : ""}
+`;
+  });
+}
+
+// ===============================
+// TEAMLOGIK
+// ===============================
+function spielerStaerke(s) {
+  return s.slice(2).reduce((a,b)=>a+b,0);
+}
+
+function berechneTeams() {
+  const out = document.getElementById("output");
+  out.innerHTML = "";
+
+  const gks = Object.values(goalkeepers).filter(Boolean);
+  const feldspieler = spieler.filter(s=>s[1] && !gks.includes(s[0]));
+
+  const sortiert = feldspieler.map(s=>{
+    const base = spielerStaerke(s);
+    const noise = (Math.random()-0.5) *
+      VARIANCE_MODES[varianceIndex].value/100 * base;
+    return {name:s[0], base, score: base + noise};
+  }).sort((a,b)=>b.score-a.score);
+
+  let teamArr = Array.from({length:teams},()=>[]);
+  let idx=0,dir=1;
+  sortiert.forEach(sp=>{
+    teamArr[idx].push(sp);
+    idx+=dir;
+    if(idx===teams){idx--;dir=-1;}
+    if(idx<0){idx=0;dir=1;}
+  });
+
+  if(teams > gks.length && gks.length){
+    out.innerHTML += `
+<div class="goalkeeper-box">
+<b>Torhüter:</b><br>
+${gks.map((g,i)=>`Torhüter ${i+1}: ${g}`).join("<br>")}
+</div>`;
+  }
+
+  teamArr.forEach((t,i)=>{
+    const sum = t.reduce((s,p)=>s+p.base,0);
+    const avg = t.length ? (sum/t.length).toFixed(1) : "–";
+    const gk = teams <= gks.length
+      ? `<br><b>Torhüter:</b> ${gks[i] || "–"}`
+      : "";
+    out.innerHTML += `
+<div class="team-card">
+<b>Mannschaft ${i+1}</b> |
+Spieler: ${t.length} |
+Ø Stärke: ${avg}${gk}<br>
+${t.map(p=>p.name).join(", ")}
+</div>`;
+  });
+}
+
+// ===============================
+// INIT
+// ===============================
+initTeamSelect();
+loadTeam(activeTeam);
+</script>
 
 </body>
 </html>
