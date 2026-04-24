@@ -109,7 +109,7 @@ label {
 <div class="section">
 <h2>👥 Mannschaft</h2>
 <select id="teamSelect"></select>
-<p style="font-size:14px;color:#666;">Antippen → Passwort → wechseln 🔒</p>
+<p style="font-size:14px;color:#666;">Mannschaft antippen → Passwort → Wechsel 🔒</p>
 </div>
 
 <div class="section">
@@ -170,6 +170,35 @@ label {
 const EDIT_PASSWORT = "1406";
 let pwCallback = null;
 
+// ===============================
+// PASSWORT MODAL
+// ===============================
+function requestPassword(cb) {
+  pwCallback = cb;
+  document.getElementById("pwInput").value = "";
+  document.getElementById("pwModal").style.display = "flex";
+  setTimeout(()=>document.getElementById("pwInput").focus(),50);
+}
+
+function confirmPassword() {
+  const val = document.getElementById("pwInput").value;
+  if (val !== EDIT_PASSWORT) {
+    alert("Falsches Passwort");
+    closePw();
+    revertTeamSelect();
+    return;
+  }
+  closePw();
+  pwCallback && pwCallback();
+}
+
+function closePw() {
+  document.getElementById("pwModal").style.display = "none";
+}
+
+// ===============================
+// VARIANZ
+// ===============================
 const VARIANCE_MODES = [
   { value: 0, label: "Fair‑Modus" },
   { value: 30, label: "Trainings‑Mix" },
@@ -198,33 +227,10 @@ const TEAMS = {
 };
 
 // ===============================
-// PASSWORT MODAL
-// ===============================
-function requestPassword(cb) {
-  pwCallback = cb;
-  document.getElementById("pwInput").value = "";
-  document.getElementById("pwModal").style.display = "flex";
-  setTimeout(()=>document.getElementById("pwInput").focus(),50);
-}
-
-function confirmPassword() {
-  const val = document.getElementById("pwInput").value;
-  if (val !== EDIT_PASSWORT) {
-    alert("Falsches Passwort");
-    return;
-  }
-  closePw();
-  pwCallback && pwCallback();
-}
-
-function closePw() {
-  document.getElementById("pwModal").style.display = "none";
-}
-
-// ===============================
 // STATE
 // ===============================
 let activeTeam = localStorage.getItem("activeTeam") || Object.keys(TEAMS)[0];
+let pendingTeam = null;
 let STORAGE_KEY = "teamgenerator_" + activeTeam;
 
 let spieler = [];
@@ -234,7 +240,38 @@ let editMode = false;
 let goalkeepers = {1:null,2:null};
 
 // ===============================
-// LOAD TEAM
+// TEAM SELECT
+// ===============================
+const teamSelect = document.getElementById("teamSelect");
+
+function initTeamSelect() {
+  teamSelect.innerHTML = "";
+  Object.keys(TEAMS).forEach(t=>{
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t;
+    teamSelect.appendChild(o);
+  });
+  teamSelect.value = activeTeam;
+}
+
+function revertTeamSelect() {
+  teamSelect.value = activeTeam;
+}
+
+teamSelect.addEventListener("change", () => {
+  const selected = teamSelect.value;
+  if (selected === activeTeam) return;
+
+  pendingTeam = selected;
+  requestPassword(() => {
+    loadTeam(pendingTeam);
+    pendingTeam = null;
+  });
+});
+
+// ===============================
+// LOAD / SAVE
 // ===============================
 function loadTeam(teamName) {
   activeTeam = teamName;
@@ -267,9 +304,6 @@ function loadTeam(teamName) {
   document.getElementById("output").innerHTML = "";
 }
 
-// ===============================
-// SAVE
-// ===============================
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     spieler, teams, varianceIndex, goalkeepers
@@ -277,56 +311,27 @@ function save() {
 }
 
 // ===============================
-// TEAM DROPDOWN (MOBILE‑SICHER)
-// ===============================
-const teamSelect = document.getElementById("teamSelect");
-let teamUnlocked = false;
-
-function initTeamSelect(){
-  teamSelect.innerHTML="";
-  Object.keys(TEAMS).forEach(t=>{
-    const o=document.createElement("option");
-    o.value=t;o.textContent=t;
-    teamSelect.appendChild(o);
-  });
-  teamSelect.value=activeTeam;
-}
-
-teamSelect.addEventListener("change",()=>{
-  if(!teamUnlocked){
-    teamSelect.value = activeTeam;
-    requestPassword(()=>{
-      teamUnlocked = true;
-      alert("Mannschaft freigegeben – bitte erneut auswählen");
-    });
-    return;
-  }
-  teamUnlocked = false;
-  loadTeam(teamSelect.value);
-});
-
-// ===============================
 // SETTINGS
 // ===============================
-const teamCountSelect=document.getElementById("teamCount");
-const varianceInput=document.getElementById("variance");
-const varLabel=document.getElementById("varLabel");
+const teamCountSelect = document.getElementById("teamCount");
+const varianceInput = document.getElementById("variance");
+const varLabel = document.getElementById("varLabel");
 
-function updateSettingsUI(){
-  teamCountSelect.value=teams;
-  varianceInput.value=varianceIndex;
+function updateSettingsUI() {
+  teamCountSelect.value = teams;
+  varianceInput.value = varianceIndex;
   varLabel.innerText =
     VARIANCE_MODES[varianceIndex].label +
     " (" + VARIANCE_MODES[varianceIndex].value + "%)";
 }
 
-teamCountSelect.onchange=()=>{
-  teams=+teamCountSelect.value;
+teamCountSelect.onchange = () => {
+  teams = +teamCountSelect.value;
   save();
 };
 
-varianceInput.oninput=()=>{
-  varianceIndex=+varianceInput.value;
+varianceInput.oninput = () => {
+  varianceIndex = +varianceInput.value;
   varLabel.innerText =
     VARIANCE_MODES[varianceIndex].label +
     " (" + VARIANCE_MODES[varianceIndex].value + "%)";
@@ -336,67 +341,74 @@ varianceInput.oninput=()=>{
 // ===============================
 // EDIT MODE
 // ===============================
-function toggleEdit(){
-  editMode=!editMode;
+function toggleEdit() {
+  editMode = !editMode;
   renderSpieler();
 }
 
 // ===============================
 // TORHÜTER UI
 // ===============================
-function renderGoalkeeperUI(){
-  if(activeTeam!=="E‑Jugend") return;
+function renderGoalkeeperUI() {
+  if (activeTeam !== "E‑Jugend") return;
 
-  const gk1=document.getElementById("gk1");
-  const gk2=document.getElementById("gk2");
+  const gk1 = document.getElementById("gk1");
+  const gk2 = document.getElementById("gk2");
 
-  const anwesende=spieler.filter(s=>s[1]===1).map(s=>s[0]);
+  const anwesende = spieler.filter(s=>s[1]===1).map(s=>s[0]);
 
-  function fill(sel,other){
-    sel.innerHTML="<option value=''>Kein Torhüter</option>";
+  function fill(sel, other) {
+    sel.innerHTML = "<option value=''>Kein Torhüter</option>";
     anwesende.forEach(n=>{
-      if(n===other) return;
-      const o=document.createElement("option");
-      o.value=n;o.textContent=n;
+      if(n === other) return;
+      const o = document.createElement("option");
+      o.value = n; o.textContent = n;
       sel.appendChild(o);
     });
   }
 
-  fill(gk1,goalkeepers[2]);
-  fill(gk2,goalkeepers[1]);
+  fill(gk1, goalkeepers[2]);
+  fill(gk2, goalkeepers[1]);
 
-  gk1.value=goalkeepers[1]||"";
-  gk2.value=goalkeepers[2]||"";
+  gk1.value = goalkeepers[1] || "";
+  gk2.value = goalkeepers[2] || "";
 
-  gk1.onchange=()=>{goalkeepers[1]=gk1.value||null;save();renderGoalkeeperUI();};
-  gk2.onchange=()=>{goalkeepers[2]=gk2.value||null;save();renderGoalkeeperUI();};
+  gk1.onchange = () => {
+    goalkeepers[1] = gk1.value || null;
+    save(); renderGoalkeeperUI();
+  };
+  gk2.onchange = () => {
+    goalkeepers[2] = gk2.value || null;
+    save(); renderGoalkeeperUI();
+  };
 }
 
 // ===============================
 // SPIELER UI
 // ===============================
-function togglePresent(i){
-  spieler[i][1]=spieler[i][1]?0:1;
+function togglePresent(i) {
+  spieler[i][1] = spieler[i][1] ? 0 : 1;
   save();
   renderSpieler();
   renderGoalkeeperUI();
 }
 
-function renderSpieler(){
-  const div=document.getElementById("spieler");
-  div.innerHTML="";
+function renderSpieler() {
+  const div = document.getElementById("spieler");
+  div.innerHTML = "";
+
   spieler.forEach((s,i)=>{
-    div.innerHTML+=`
+    div.innerHTML += `
 <div class="player ${s[1]?"present":"absent"}"
 onclick="togglePresent(${i})">${s[0]}</div>
-${editMode?`
+${editMode ? `
 <div class="edit-panel">
   ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
     <label>${n}: ${s[j+2]}</label>
     <input type="range" min="1" max="5" value="${s[j+2]}"
     oninput="spieler[${i}][${j+2}]=+this.value;save()">
   `).join("")}
-</div>`:""}
+</div>` : ""}
 `;
   });
 }
@@ -404,22 +416,25 @@ ${editMode?`
 // ===============================
 // TEAMLOGIK
 // ===============================
-function spielerStaerke(s){return s.slice(2).reduce((a,b)=>a+b,0);}
+function spielerStaerke(s) {
+  return s.slice(2).reduce((a,b)=>a+b,0);
+}
 
-function berechneTeams(){
-  const out=document.getElementById("output");
-  out.innerHTML="";
+function berechneTeams() {
+  const out = document.getElementById("output");
+  out.innerHTML = "";
 
-  const gks=Object.values(goalkeepers).filter(Boolean);
-  const feldspieler=spieler.filter(s=>s[1] && !gks.includes(s[0]));
+  const gks = Object.values(goalkeepers).filter(Boolean);
+  const feldspieler = spieler.filter(s=>s[1] && !gks.includes(s[0]));
 
-  const sortiert=feldspieler.map(s=>{
-    const base=spielerStaerke(s);
-    const noise=(Math.random()-0.5)*VARIANCE_MODES[varianceIndex].value/100*base;
-    return {name:s[0],base,score:base+noise};
+  const sortiert = feldspieler.map(s=>{
+    const base = spielerStaerke(s);
+    const noise = (Math.random()-0.5) *
+      VARIANCE_MODES[varianceIndex].value/100 * base;
+    return {name:s[0], base, score: base + noise};
   }).sort((a,b)=>b.score-a.score);
 
-  let teamArr=Array.from({length:teams},()=>[]);
+  let teamArr = Array.from({length:teams},()=>[]);
   let idx=0,dir=1;
   sortiert.forEach(sp=>{
     teamArr[idx].push(sp);
@@ -428,8 +443,8 @@ function berechneTeams(){
     if(idx<0){idx=0;dir=1;}
   });
 
-  if(teams>gks.length && gks.length){
-    out.innerHTML+=`
+  if(teams > gks.length && gks.length){
+    out.innerHTML += `
 <div class="goalkeeper-box">
 <b>Torhüter:</b><br>
 ${gks.map((g,i)=>`Torhüter ${i+1}: ${g}`).join("<br>")}
@@ -437,10 +452,12 @@ ${gks.map((g,i)=>`Torhüter ${i+1}: ${g}`).join("<br>")}
   }
 
   teamArr.forEach((t,i)=>{
-    const sum=t.reduce((s,p)=>s+p.base,0);
-    const avg=t.length?(sum/t.length).toFixed(1):"–";
-    const gk=teams<=gks.length?`<br><b>Torhüter:</b> ${gks[i]||"–"}`:"";
-    out.innerHTML+=`
+    const sum = t.reduce((s,p)=>s+p.base,0);
+    const avg = t.length ? (sum/t.length).toFixed(1) : "–";
+    const gk = teams <= gks.length
+      ? `<br><b>Torhüter:</b> ${gks[i] || "–"}`
+      : "";
+    out.innerHTML += `
 <div class="team-card">
 <b>Mannschaft ${i+1}</b> |
 Spieler: ${t.length} |
@@ -453,6 +470,7 @@ ${t.map(p=>p.name).join(", ")}
 // ===============================
 // INIT
 // ===============================
+initTeamSelect();
 loadTeam(activeTeam);
 </script>
 
