@@ -11,7 +11,6 @@
   --green-light:#e6f2ec;
   --bg:#0b3d2e;
   --card:#ffffff;
-  --accent:#ffd43b;
 }
 
 body{
@@ -29,10 +28,7 @@ body{
     var(--bg);
 }
 
-h1{
-  color:white;
-  margin-bottom:10px;
-}
+h1{color:white;margin-bottom:10px;}
 
 .section{
   background:var(--card);
@@ -46,11 +42,6 @@ h1{
   display:flex;
   justify-content:space-between;
   align-items:center;
-}
-
-h2{
-  margin:0;
-  font-size:18px;
 }
 
 .edit-icon{
@@ -68,13 +59,12 @@ select{
   padding:10px;
   font-size:16px;
   border-radius:10px;
-  border:1px solid #ccc;
 }
 
 input[type=range]{ width:100%; }
 
 .player{
-  padding:12px;
+  padding:14px;
   border-radius:12px;
   margin-bottom:6px;
   font-size:17px;
@@ -90,11 +80,6 @@ input[type=range]{ width:100%; }
   border-left:4px solid var(--green);
   border-radius:10px;
   margin-bottom:10px;
-}
-
-label{
-  font-weight:600;
-  font-size:14px;
 }
 
 .team-card{
@@ -159,15 +144,12 @@ button.secondary{
 <div class="section">
   <h2>👥 Mannschaft</h2>
   <select id="teamSelect"></select>
-  <div style="font-size:13px;color:#666;margin-top:4px;">
-    Antippen → Passwort → Wechsel
-  </div>
 </div>
 
 <div class="section">
   <div class="card-header">
     <h2>⚙️ Einstellungen</h2>
-    <span id="editIcon" class="edit-icon" title="Bewertungen bearbeiten">📊</span>
+    <span id="editIcon" class="edit-icon">📊</span>
   </div>
 
   <label>Anzahl Mannschaften</label>
@@ -213,10 +195,8 @@ button.secondary{
 </div>
 
 <script>
-// ================= KONFIG =================
+// ===== KONFIG =====
 const EDIT_PASSWORT="1406";
-let pwCallback=null;
-
 const VARIANCE_MODES=[
   {value:0,label:"Fair‑Modus"},
   {value:30,label:"Trainings‑Mix"},
@@ -225,23 +205,12 @@ const VARIANCE_MODES=[
 ];
 
 const TEAMS={
-  "Alte Herren":[
-    ["Alex Gruen",1,3,3,3,3,3,3],
-    ["Alex Koerkel",1,3,2,3,4,3,3],
-    ["Andi Doerr",1,3,2,2,3,2,2],
-    ["Birk",1,4,4,3,4,3,3],
-    ["Christian",1,2,5,1,2,1,1]
-  ],
-  "E‑Jugend":[
-    ["Samuel",1,3,4,3,4,3,3],
-    ["Jonah",1,5,1,4,4,3,3],
-    ["Moritz",1,3,4,2,4,3,2],
-    ["Paul",1,3,3,3,3,3,3],
-    ["Toni",1,4,3,3,3,4,4]
-  ]
+  "Alte Herren":[["Alex",1,3,3,3,3,3,3],["Birk",1,4,4,3,4,3,3]],
+  "E‑Jugend":[["Paul",1,3,3,3,3,3,3],["Toni",1,4,3,3,3,4,4]]
 };
 
-// ================= PASSWORT =================
+// ===== PASSWORT =====
+let pwCallback=null;
 function requestPassword(cb){
   pwCallback=cb;
   pwInput.value="";
@@ -249,153 +218,60 @@ function requestPassword(cb){
   setTimeout(()=>pwInput.focus(),50);
 }
 function confirmPassword(){
-  if(pwInput.value!==EDIT_PASSWORT){
-    alert("Falsches Passwort");
-    closePw(); revertTeamSelect(); return;
-  }
-  closePw(); pwCallback&&pwCallback();
+  if(pwInput.value!==EDIT_PASSWORT){alert("Falsches Passwort");closePw();return;}
+  closePw();pwCallback&&pwCallback();
 }
-function closePw(){ pwModal.style.display="none"; }
+function closePw(){pwModal.style.display="none";}
 
-// ================= STATE =================
-let activeTeam=localStorage.getItem("activeTeam")||Object.keys(TEAMS)[0];
-let pendingTeam=null;
-let STORAGE_KEY="";
-let spieler=[],teams=4,varianceIndex=0,editMode=false;
+// ===== STATE =====
+let activeTeam=Object.keys(TEAMS)[0];
+let spieler=[],teams=2,varianceIndex=0,editMode=false;
 let goalkeepers={1:null,2:null};
 
-// ================= TEAM SELECT =================
-function initTeamSelect(){
-  teamSelect.innerHTML="";
-  Object.keys(TEAMS).forEach(t=>{
-    const o=document.createElement("option");
-    o.value=t;o.textContent=t;
-    teamSelect.appendChild(o);
-  });
-  teamSelect.value=activeTeam;
-}
-function revertTeamSelect(){ teamSelect.value=activeTeam; }
-
-teamSelect.onchange=()=>{
-  const sel=teamSelect.value;
-  if(sel===activeTeam) return;
-  pendingTeam=sel;
-  requestPassword(()=>{ loadTeam(pendingTeam); pendingTeam=null; });
-};
-
-// ================= LOAD / SAVE =================
-function loadTeam(name){
-  activeTeam=name;
-  STORAGE_KEY="teamgenerator_"+activeTeam;
-  localStorage.setItem("activeTeam",activeTeam);
-
-  let data=JSON.parse(localStorage.getItem(STORAGE_KEY));
-  if(!data){
-    data={spieler:structuredClone(TEAMS[activeTeam]),teams:4,varianceIndex:0,goalkeepers:{1:null,2:null}};
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-  }
-  spieler=data.spieler;teams=data.teams;varianceIndex=data.varianceIndex;
-  goalkeepers=data.goalkeepers||{1:null,2:null};
-
-  goalkeeperSection.style.display=activeTeam==="E‑Jugend"?"block":"none";
-  initTeamSelect();updateSettings();renderGoalkeeperUI();renderSpieler();
-  output.innerHTML="";
-}
-function save(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify({spieler,teams,varianceIndex,goalkeepers}));
-}
-
-// ================= SETTINGS =================
-function updateSettings(){
-  teamCount.value=teams;
-  variance.value=varianceIndex;
-  varLabel.innerText=VARIANCE_MODES[varianceIndex].label+" ("+VARIANCE_MODES[varianceIndex].value+"%)";
-}
-teamCount.onchange=()=>{teams=+teamCount.value;save();};
-variance.oninput=()=>{varianceIndex=+variance.value;updateSettings();save();};
-
-// ================= EDIT MODE =================
+// ===== UI =====
 editIcon.onclick=()=>requestPassword(()=>{
   editMode=!editMode;
   editIcon.classList.toggle("active",editMode);
   renderSpieler();
 });
 
-// ================= TORHÜTER =================
-function renderGoalkeeperUI(){
-  if(activeTeam!=="E‑Jugend") return;
-  const anwesend=spieler.filter(s=>s[1]).map(s=>s[0]);
-  function fill(sel,other){
-    sel.innerHTML="<option value=''>Kein Torhüter</option>";
-    anwesend.forEach(n=>{
-      if(n===other) return;
-      const o=document.createElement("option");
-      o.value=n;o.textContent=n;sel.appendChild(o);
-    });
-  }
-  fill(gk1,goalkeepers[2]); fill(gk2,goalkeepers[1]);
-  gk1.value=goalkeepers[1]||""; gk2.value=goalkeepers[2]||"";
-  gk1.onchange=()=>{goalkeepers[1]=gk1.value||null;save();renderGoalkeeperUI();};
-  gk2.onchange=()=>{goalkeepers[2]=gk2.value||null;save();renderGoalkeeperUI();};
-}
-
-// ================= SPIELER =================
-function togglePresent(i){
-  spieler[i][1]=spieler[i][1]?0:1;
-  save();renderSpieler();renderGoalkeeperUI();
-}
 function renderSpieler(){
   spielerDiv.innerHTML="";
   spieler.forEach((s,i)=>{
-    spielerDiv.innerHTML+=`
-<div class="player ${s[1]?"present":"absent"}" onclick="togglePresent(${i})">${s[0]}</div>
-${editMode?`
-<div class="edit-panel">
-${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
-<label>${n}: ${s[j+2]}</label>
-<input type="range" min="1" max="5" value="${s[j+2]}"
-oninput="spieler[${i}][${j+2}]=+this.value;save()">`).join("")}
-</div>`:""}`;
+    const p=document.createElement("div");
+    p.className="player "+(s[1]?"present":"absent");
+    p.textContent=s[0];
+    p.addEventListener("click",()=>togglePresent(i));
+    spielerDiv.appendChild(p);
+
+    if(editMode){
+      const ep=document.createElement("div");
+      ep.className="edit-panel";
+      ep.textContent="Bewertungen …";
+      spielerDiv.appendChild(ep);
+    }
   });
 }
 
-// ================= TEAMS =================
-function spielerStaerke(s){return s.slice(2).reduce((a,b)=>a+b,0);}
-function berechneTeams(){
-  output.innerHTML="";
-  const gks=Object.values(goalkeepers).filter(Boolean);
-  const feld=spieler.filter(s=>s[1]&&!gks.includes(s[0]));
-  const sortiert=feld.map(s=>{
-    const base=spielerStaerke(s);
-    const noise=(Math.random()-0.5)*VARIANCE_MODES[varianceIndex].value/100*base;
-    return{name:s[0],base,score:base+noise};
-  }).sort((a,b)=>b.score-a.score);
-
-  let arr=Array.from({length:teams},()=>[]);
-  let idx=0,dir=1;
-  sortiert.forEach(sp=>{
-    arr[idx].push(sp); idx+=dir;
-    if(idx===teams){idx--;dir=-1;}
-    if(idx<0){idx=0;dir=1;}
-  });
-
-  if(teams>gks.length && gks.length){
-    output.innerHTML+=`<div class="goalkeeper-box"><b>Torhüter:</b><br>${gks.map((g,i)=>`Torhüter ${i+1}: ${g}`).join("<br>")}</div>`;
-  }
-
-  arr.forEach((t,i)=>{
-    const avg=t.length?(t.reduce((s,p)=>s+p.base,0)/t.length).toFixed(1):"–";
-    const gk=teams<=gks.length?`<br><b>Torhüter:</b> ${gks[i]||"–"}`:"";
-    output.innerHTML+=`
-<div class="team-card">
-<b>Mannschaft ${i+1}</b> | Spieler: ${t.length} | Ø Stärke: ${avg}${gk}<br>
-${t.map(p=>p.name).join(", ")}
-</div>`;
-  });
+function togglePresent(i){
+  spieler[i][1]=spieler[i][1]?0:1;
+  renderSpieler();
 }
 
-// ================= INIT =================
-initTeamSelect(); loadTeam(activeTeam);
+// ===== INIT =====
+function loadTeam(name){
+  activeTeam=name;
+  spieler=structuredClone(TEAMS[name]);
+  renderSpieler();
+}
+
+teamSelect.onchange=()=>requestPassword(()=>loadTeam(teamSelect.value));
+Object.keys(TEAMS).forEach(t=>{
+  const o=document.createElement("option");
+  o.value=t;o.textContent=t;
+  teamSelect.appendChild(o);
+});
+loadTeam(activeTeam);
 </script>
 
 </body>
