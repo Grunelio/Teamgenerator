@@ -34,11 +34,13 @@ button.secondary {
   background: #e0e0e0;
   color: black;
 }
-input[type=number] {
+
+select, input[type=number] {
   width: 100%;
   font-size: 16px;
   padding: 8px;
 }
+
 input[type=range] { width: 100%; }
 
 .player {
@@ -73,8 +75,11 @@ label {
 <h1>⚽ Teamgenerator</h1>
 
 <div class="section">
-<button class="secondary" onclick="switchTeam()">🔄 Mannschaft wechseln</button>
-<p><b>Aktive Mannschaft:</b> <span id="activeTeamLabel"></span></p>
+<h2>👥 Mannschaft</h2>
+
+<select id="teamSelect" disabled></select>
+
+<button class="secondary" onclick="unlockTeamSelect()">🔒 Mannschaft wechseln</button>
 </div>
 
 <div class="section">
@@ -168,24 +173,35 @@ const TEAMS = {
 // ===============================
 // 🔄 AKTIVE MANNSCHAFT
 // ===============================
-let activeTeam = localStorage.getItem("activeTeam") || "Alte Herren";
+let activeTeam = localStorage.getItem("activeTeam") || Object.keys(TEAMS)[0];
 let STORAGE_KEY = "teamgenerator_" + activeTeam;
 
-let data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-if (!data) {
-  data = {
-    spieler: structuredClone(TEAMS[activeTeam]),
-    teams: 4,
-    varianceIndex: 0
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function loadTeam(teamName) {
+  activeTeam = teamName;
+  STORAGE_KEY = "teamgenerator_" + activeTeam;
+  localStorage.setItem("activeTeam", activeTeam);
+
+  let data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  if (!data) {
+    data = {
+      spieler: structuredClone(TEAMS[activeTeam]),
+      teams: 4,
+      varianceIndex: 0
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  spieler = data.spieler;
+  teams = data.teams;
+  varianceIndex = data.varianceIndex;
+
+  updateSettingsUI();
+  renderSpieler();
+  document.getElementById("output").innerHTML = "";
 }
 
-let { spieler, teams, varianceIndex } = data;
-let editMode = false;
-
 // ===============================
-// SAVE
+// 💾 SAVE
 // ===============================
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -194,43 +210,61 @@ function save() {
 }
 
 // ===============================
-// UI INIT
+// 🔓 TEAM AUSWAHL
 // ===============================
-document.getElementById("activeTeamLabel").innerText = activeTeam;
+const teamSelect = document.getElementById("teamSelect");
 
+function initTeamSelect() {
+  teamSelect.innerHTML = "";
+  Object.keys(TEAMS).forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    teamSelect.appendChild(opt);
+  });
+  teamSelect.value = activeTeam;
+}
+initTeamSelect();
+
+function unlockTeamSelect() {
+  const pw = prompt("Mannschaft wechseln – Passwort:");
+  if (pw !== EDIT_PASSWORT) return alert("Falsches Passwort");
+
+  teamSelect.disabled = false;
+  teamSelect.onchange = () => {
+    teamSelect.disabled = true;
+    loadTeam(teamSelect.value);
+  };
+}
+
+// ===============================
+// ⚙️ SETTINGS
+// ===============================
 const teamInput = document.getElementById("teamCount");
 const varianceInput = document.getElementById("variance");
 const varLabel = document.getElementById("varLabel");
 
-teamInput.value = teams;
-varianceInput.value = varianceIndex;
-varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
+function updateSettingsUI() {
+  teamInput.value = teams;
+  varianceInput.value = varianceIndex;
+  varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
+}
 
-teamInput.oninput = () => { teams = +teamInput.value; save(); };
+teamInput.oninput = () => {
+  teams = Number(teamInput.value);
+  save();
+};
+
 varianceInput.oninput = () => {
-  varianceIndex = +varianceInput.value;
+  varianceIndex = Number(varianceInput.value);
   varLabel.innerText = VARIANCE_MODES[varianceIndex].label;
   save();
 };
 
 // ===============================
-// 🔄 MANNSCHAFT WECHSELN
+// 🔒 EDIT MODE
 // ===============================
-function switchTeam() {
-  const pw = prompt("Mannschaft wechseln – Passwort:");
-  if (pw !== EDIT_PASSWORT) return alert("Falsches Passwort");
-
-  const names = Object.keys(TEAMS);
-  const choice = prompt("Mannschaft wählen:\n" + names.join("\n"), activeTeam);
-  if (!TEAMS[choice]) return;
-
-  localStorage.setItem("activeTeam", choice);
-  location.reload();
-}
-
-// ===============================
-// EDIT MODE
-// ===============================
+let editMode = false;
 function toggleEdit() {
   if (!editMode) {
     const pw = prompt("Edit‑Modus – Passwort:");
@@ -241,7 +275,7 @@ function toggleEdit() {
 }
 
 // ===============================
-// SPIELER UI
+// 👥 SPIELER UI
 // ===============================
 function togglePresent(i) {
   spieler[i][1] = spieler[i][1] ? 0 : 1;
@@ -272,7 +306,7 @@ ${editMode ? `
 }
 
 // ===============================
-// TEAMLOGIK
+// ⚽ TEAMLOGIK
 // ===============================
 function spielerStaerke(s) {
   return s.slice(2).reduce((a,b)=>a+b,0);
@@ -315,7 +349,10 @@ ${t.map(p=>p.name).join(", ")}
   });
 }
 
-renderSpieler();
+// ===============================
+// INIT
+// ===============================
+loadTeam(activeTeam);
 </script>
 
 </body>
