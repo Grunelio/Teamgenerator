@@ -78,8 +78,9 @@ label {
 <h2>👥 Mannschaft</h2>
 
 <select id="teamSelect" disabled></select>
-
-<button class="secondary" onclick="unlockTeamSelect()">🔒 Mannschaft wechseln</button>
+<p style="font-size:14px;color:#666;margin-top:6px;">
+Tippe auf die Mannschaft, um zu wechseln 🔒
+</p>
 </div>
 
 <div class="section">
@@ -210,7 +211,7 @@ function save() {
 }
 
 // ===============================
-// 🔓 TEAM AUSWAHL
+// 🔓 TEAM DROPDOWN
 // ===============================
 const teamSelect = document.getElementById("teamSelect");
 
@@ -226,11 +227,19 @@ function initTeamSelect() {
 }
 initTeamSelect();
 
-function unlockTeamSelect() {
+// Passwortabfrage beim Antippen
+teamSelect.addEventListener("mousedown", tryUnlockTeamSelect);
+teamSelect.addEventListener("touchstart", tryUnlockTeamSelect);
+
+function tryUnlockTeamSelect(e) {
+  if (!teamSelect.disabled) return;
+
+  e.preventDefault();
   const pw = prompt("Mannschaft wechseln – Passwort:");
   if (pw !== EDIT_PASSWORT) return alert("Falsches Passwort");
 
   teamSelect.disabled = false;
+
   teamSelect.onchange = () => {
     teamSelect.disabled = true;
     loadTeam(teamSelect.value);
