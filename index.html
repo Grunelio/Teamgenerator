@@ -108,8 +108,8 @@ label {
 
 <div class="section">
 <h2>👥 Mannschaft</h2>
-<select id="teamSelect" disabled></select>
-<p style="font-size:14px;color:#666;">Tippe auf die Mannschaft zum Wechseln 🔒</p>
+<select id="teamSelect"></select>
+<p style="font-size:14px;color:#666;">Antippen → Passwort → wechseln 🔒</p>
 </div>
 
 <div class="section">
@@ -277,9 +277,10 @@ function save() {
 }
 
 // ===============================
-// TEAM DROPDOWN
+// TEAM DROPDOWN (MOBILE‑SICHER)
 // ===============================
 const teamSelect = document.getElementById("teamSelect");
+let teamUnlocked = false;
 
 function initTeamSelect(){
   teamSelect.innerHTML="";
@@ -289,21 +290,20 @@ function initTeamSelect(){
     teamSelect.appendChild(o);
   });
   teamSelect.value=activeTeam;
-  teamSelect.disabled=true;
 }
 
-teamSelect.addEventListener("click",()=>{
-  if(!teamSelect.disabled) return;
-  requestPassword(()=>{
-    teamSelect.disabled=false;
-    teamSelect.focus();
-  });
-});
-
-teamSelect.onchange=()=>{
-  teamSelect.disabled=true;
+teamSelect.addEventListener("change",()=>{
+  if(!teamUnlocked){
+    teamSelect.value = activeTeam;
+    requestPassword(()=>{
+      teamUnlocked = true;
+      alert("Mannschaft freigegeben – bitte erneut auswählen");
+    });
+    return;
+  }
+  teamUnlocked = false;
   loadTeam(teamSelect.value);
-};
+});
 
 // ===============================
 // SETTINGS
