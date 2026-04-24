@@ -14,7 +14,6 @@
   --gray:#f0f0f0;
 }
 
-/* Spielfeld-Hintergrund */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont;
   margin: 0;
@@ -72,14 +71,8 @@ input[type=range] { width: 100%; }
   background: var(--gray);
 }
 
-.player.present {
-  background: var(--pitch-light);
-}
-
-.player.absent {
-  background: #eee;
-  color: #777;
-}
+.player.present { background: var(--pitch-light); }
+.player.absent  { background: #eee; color:#777; }
 
 /* Edit Panel */
 .edit-panel {
@@ -177,9 +170,6 @@ button.secondary {
     <option>2</option><option>3</option><option>4</option>
     <option>5</option><option>6</option><option>7</option><option>8</option>
   </select>
-
-  <label>🎲 Modus: <strong><span id="varLabel"></span></strong></label>
-  <input type="range" min="0" max="3" step="1" id="variance">
 </div>
 
 <div class="section" id="goalkeeperSection" style="display:none;">
@@ -206,6 +196,13 @@ button.secondary {
   <div id="output"></div>
 </div>
 
+<!-- ✅ MODUS-SLIDER JETZT UNTEN -->
+<div class="section">
+  <h2>🎲 Modus ändern</h2>
+  <label><strong><span id="varLabel"></span></strong></label>
+  <input type="range" min="0" max="3" step="1" id="variance">
+</div>
+
 <!-- Passwort Modal -->
 <div id="pwModal">
   <div class="box">
@@ -222,6 +219,7 @@ button.secondary {
 // ===============================
 const EDIT_PASSWORT = "1406";
 let pwCallback = null;
+let teamsBerechnet = false;
 
 // ===============================
 // PASSWORT MODAL
@@ -234,8 +232,7 @@ function requestPassword(cb) {
 }
 
 function confirmPassword() {
-  const val = pwInput.value;
-  if (val !== EDIT_PASSWORT) {
+  if (pwInput.value !== EDIT_PASSWORT) {
     alert("Falsches Passwort");
     closePw();
     revertTeamSelect();
@@ -313,14 +310,9 @@ function revertTeamSelect() {
 }
 
 teamSelect.addEventListener("change", () => {
-  const selected = teamSelect.value;
-  if (selected === activeTeam) return;
-
-  pendingTeam = selected;
-  requestPassword(() => {
-    loadTeam(pendingTeam);
-    pendingTeam = null;
-  });
+  if (teamSelect.value === activeTeam) return;
+  pendingTeam = teamSelect.value;
+  requestPassword(() => loadTeam(pendingTeam));
 });
 
 // ===============================
@@ -355,6 +347,7 @@ function loadTeam(teamName) {
   renderGoalkeeperUI();
   renderSpieler();
   output.innerHTML = "";
+  teamsBerechnet = false;
 }
 
 function save() {
@@ -364,7 +357,7 @@ function save() {
 }
 
 // ===============================
-// SETTINGS
+// SETTINGS (nur Anzahl Teams)
 // ===============================
 const teamCountSelect = document.getElementById("teamCount");
 const varianceInput = document.getElementById("variance");
@@ -383,12 +376,14 @@ teamCountSelect.onchange = () => {
   save();
 };
 
+// ✅ LIVE-NEUBERECHNUNG BEIM SLIDER
 varianceInput.oninput = () => {
   varianceIndex = +varianceInput.value;
   varLabel.innerText =
     VARIANCE_MODES[varianceIndex].label +
     " (" + VARIANCE_MODES[varianceIndex].value + "%)";
   save();
+  if (teamsBerechnet) berechneTeams();
 };
 
 // ===============================
@@ -474,6 +469,8 @@ function spielerStaerke(s) {
 }
 
 function berechneTeams() {
+  teamsBerechnet = true;
+
   const out = document.getElementById("output");
   out.innerHTML = "";
 
