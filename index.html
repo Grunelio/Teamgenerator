@@ -69,6 +69,7 @@ label {
   padding: 12px;
   margin-bottom: 12px;
 }
+
 .goalkeeper-box {
   background:#eef5ff;
   padding:8px;
@@ -97,9 +98,10 @@ label {
 <label>🎲 Modus: <strong><span id="varLabel"></span></strong></label>
 <input type="range" min="0" max="3" step="1" id="variance">
 
-<button class="secondary" onclick="toggleEdit()">🔒 Edit‑Modus</button>
+<button class="secondary" onclick="toggleEdit()">🔒 Edit‑Modus (Bewertungen)</button>
 </div>
 
+<!-- ✅ IMMER SICHTBAR FÜR E‑JUGEND -->
 <div class="section" id="goalkeeperSection" style="display:none;">
 <h2>🧤 Torhüter (E‑Jugend)</h2>
 
@@ -146,12 +148,7 @@ const TEAMS = {
     ["Alex Koerkel",1,3,2,3,4,3,3],
     ["Andi Doerr",1,3,2,2,3,2,2],
     ["Birk",1,4,4,3,4,3,3],
-    ["Christian",1,2,5,1,2,1,1],
-    ["Daniel",1,3,2,2,3,4,3],
-    ["Dominik",1,3,1,2,1,3,2],
-    ["Erik",1,5,1,5,1,3,3],
-    ["Frank",1,5,5,5,4,4,5],
-    ["Jens",1,3,4,3,3,4,3]
+    ["Christian",1,2,5,1,2,1,1]
   ],
   "E‑Jugend": [
     ["Samuel",1,3,4,3,4,3,3],
@@ -172,7 +169,7 @@ let teams = 4;
 let varianceIndex = 0;
 let editMode = false;
 
-// nur E‑Jugend
+// ✅ Torhüter nur für E‑Jugend
 let goalkeepers = { 1: null, 2: null };
 
 // ===============================
@@ -200,7 +197,7 @@ function loadTeam(teamName) {
   goalkeepers = data.goalkeepers || {1:null,2:null};
 
   document.getElementById("goalkeeperSection").style.display =
-    activeTeam === "E‑Jugend" && editMode ? "block" : "none";
+    activeTeam === "E‑Jugend" ? "block" : "none";
 
   updateSettingsUI();
   renderGoalkeeperUI();
@@ -218,10 +215,9 @@ function save() {
 }
 
 // ===============================
-// TEAM DROPDOWN
+// TEAM DROPDOWN (PASSWORT)
 // ===============================
 const teamSelect = document.getElementById("teamSelect");
-
 Object.keys(TEAMS).forEach(t=>{
   const o=document.createElement("option");
   o.value=t;o.textContent=t;
@@ -264,7 +260,7 @@ varianceInput.oninput=()=>{
 };
 
 // ===============================
-// EDIT MODE
+// EDIT MODE (NUR BEWERTUNGEN)
 // ===============================
 function toggleEdit(){
   if(!editMode){
@@ -272,31 +268,31 @@ function toggleEdit(){
     if(pw!==EDIT_PASSWORT) return alert("Falsches Passwort");
   }
   editMode=!editMode;
-  document.getElementById("goalkeeperSection").style.display =
-    activeTeam==="E‑Jugend" && editMode ? "block":"none";
   renderSpieler();
 }
 
 // ===============================
-// TORHÜTER UI (E‑Jugend)
+// TORHÜTER UI (IMMER SICHTBAR)
 // ===============================
 function renderGoalkeeperUI(){
   if(activeTeam!=="E‑Jugend") return;
 
   const gk1=document.getElementById("gk1");
   const gk2=document.getElementById("gk2");
-  [gk1,gk2].forEach(gk=>{
+
+  [gk1,gk2].forEach((gk,idx)=>{
     gk.innerHTML="<option value=''>Kein Torhüter</option>";
     spieler.forEach(s=>{
       const o=document.createElement("option");
       o.value=s[0]; o.textContent=s[0];
       gk.appendChild(o);
     });
+    gk.value=goalkeepers[idx+1]||"";
+    gk.onchange=()=>{
+      goalkeepers[idx+1]=gk.value||null;
+      save();
+    };
   });
-  gk1.value=goalkeepers[1]||"";
-  gk2.value=goalkeepers[2]||"";
-  gk1.onchange=()=>{goalkeepers[1]=gk1.value||null;save();};
-  gk2.onchange=()=>{goalkeepers[2]=gk2.value||null;save();};
 }
 
 // ===============================
@@ -313,7 +309,16 @@ function renderSpieler(){
   spieler.forEach((s,i)=>{
     div.innerHTML+=`
 <div class="player ${s[1]?"present":"absent"}"
-onclick="togglePresent(${i})">${s[0]}</div>`;
+onclick="togglePresent(${i})">${s[0]}</div>
+${editMode?`
+<div class="edit-panel">
+  ${["Ball","Lauf","IQ","Def","Off","Chancen"].map((n,j)=>`
+    <label>${n}: ${s[j+2]}</label>
+    <input type="range" min="1" max="5" value="${s[j+2]}"
+    oninput="spieler[${i}][${j+2}]=+this.value;save()">
+  `).join("")}
+</div>`:""}
+`;
   });
 }
 
